@@ -16,7 +16,11 @@
  */
 package org.apache.camel.quarkus.k.it;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 import io.quarkus.test.common.QuarkusTestResource;
@@ -27,7 +31,6 @@ import io.restassured.path.json.JsonPath;
 import jakarta.ws.rs.core.MediaType;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.camel.util.CollectionHelper.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
@@ -51,11 +54,26 @@ public class RuntimeWithXmlTest {
     }
 
     public static class Resources implements QuarkusTestResourceLifecycleManager {
+        private static final String TEMP_DIR = "target/test-classes/temp"; // Specify your temporary directory here
+
         @Override
         public Map<String, String> start() {
-            final String res = Paths.get("src/test/resources").toAbsolutePath().toString();
+            // Create the temporary directory if it doesn't exist
+            File tempDir = new File(TEMP_DIR);
+            if (!tempDir.exists()) {
+                tempDir.mkdirs();
+            }
 
-            return mapOf(
+            // Copy the XML files from the classpath to the temporary directory
+            copyResourceToTemp("routes.xml");
+            copyResourceToTemp("rests.xml");
+            copyResourceToTemp("routes-with-expression.xml");
+
+            // Set the path to the temporary directory
+            final String res = tempDir.getAbsolutePath();
+
+            // Return the configuration
+            return Map.of(
                     // sources
                     "camel.k.sources[0].location", "file:" + res + "/routes.xml",
                     "camel.k.sources[0].type", "source",
@@ -65,6 +83,16 @@ public class RuntimeWithXmlTest {
                     "camel.k.sources[2].type", "source",
                     // misc
                     "the.body", "10");
+        }
+
+        private void copyResourceToTemp(String resourceName) {
+            try {
+                Path tempPath = Paths.get(TEMP_DIR, resourceName);
+                Files.copy(getClass().getClassLoader().getResourceAsStream(resourceName), tempPath,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to copy resource " + resourceName + " to temporary directory", e);
+            }
         }
 
         @Override

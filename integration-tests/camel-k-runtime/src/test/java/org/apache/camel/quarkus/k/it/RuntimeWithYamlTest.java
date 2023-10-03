@@ -16,7 +16,11 @@
  */
 package org.apache.camel.quarkus.k.it;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 import io.quarkus.test.common.QuarkusTestResource;
@@ -58,9 +62,21 @@ public class RuntimeWithYamlTest {
     }
 
     public static class Resources implements QuarkusTestResourceLifecycleManager {
+        private static final String TEMP_DIR = "target/test-classes/temp"; // Specify your temporary directory here
+
         @Override
         public Map<String, String> start() {
-            final String res = Paths.get("src/test/resources").toAbsolutePath().toString();
+            // Create the temporary directory if it doesn't exist
+            File tempDir = new File(TEMP_DIR);
+            if (!tempDir.exists()) {
+                tempDir.mkdirs();
+            }
+
+            // Copy the XML files from the classpath to the temporary directory
+            copyResourceToTemp("routes-with-beans.yaml");
+
+            // Set the path to the temporary directory
+            final String res = tempDir.getAbsolutePath();
 
             return mapOf(
                     // sources
@@ -68,6 +84,16 @@ public class RuntimeWithYamlTest {
                     "camel.k.sources[3].type", "source",
                     // misc
                     "camel.beans.myProcessor", "#class:" + MyProcessor.class.getName());
+        }
+
+        private void copyResourceToTemp(String resourceName) {
+            try {
+                Path tempPath = Paths.get(TEMP_DIR, resourceName);
+                Files.copy(getClass().getClassLoader().getResourceAsStream(resourceName), tempPath,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to copy resource " + resourceName + " to temporary directory", e);
+            }
         }
 
         @Override
