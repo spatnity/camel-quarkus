@@ -16,11 +16,9 @@
  */
 package org.apache.camel.quarkus.k.it;
 
-import java.io.File;
 import java.nio.file.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
@@ -60,36 +58,35 @@ public class RuntimeTest {
     }
 
     public static class Resources implements QuarkusTestResourceLifecycleManager {
-        private static final String TEMP_DIR = "target/test-classes/temp1"; // Specify your temporary directory here
+        private final Path TEMP_DIR = Paths.get("target/test-classes/temp1"); // Specify your temporary directory here
 
         @Override
         public Map<String, String> start() {
+            Path confd = TEMP_DIR.resolve("conf.d");
+
             // Create the temporary directory if it doesn't exist
-            File tempDir = new File(TEMP_DIR);
-            if (!tempDir.exists()) {
-                tempDir.mkdirs();
+            for (int i = 1; i <= 3; i++) {
+                String path = String.format("00%d", i);
+                Path confdSubDir = confd.resolve(path);
+                confdSubDir.toFile().mkdirs();
+
+                String file = i < 3 ? "conf.properties" : "flat-property";
+                copyResourceToTemp("/conf.d/" + path + "/" + file, confdSubDir.resolve(file).toAbsolutePath());
             }
 
             // Copy the XML files from the classpath to the temporary directory
-
-            copyResourceToTemp("conf.properties");
-            copyResourceToTemp("conf.d");
-            // Set the path to the temporary directory
-            final String res = tempDir.getAbsolutePath();
+            Path confProperties = TEMP_DIR.resolve("conf.properties");
+            copyResourceToTemp("/conf.properties", confProperties.toAbsolutePath());
 
             // Create paths for conf.properties and conf.d based on the temporary directory
-            String confPropertiesPath = Paths.get(res, "conf.properties").toString();
-            String confDPath = Paths.get(res, "conf.d").toString();
-
             return Map.of(
-                    "CAMEL_K_CONF", confPropertiesPath,
-                    "CAMEL_K_CONF_D", confDPath);
+                    "CAMEL_K_CONF", confProperties.toAbsolutePath().toString(),
+                    "CAMEL_K_CONF_D", confd.toAbsolutePath().toString());
         }
 
-        private void copyResourceToTemp(String resourceName) {
+        private void copyResourceToTemp(String resourceName, Path destination) {
             try {
-                Path tempPath = Paths.get(TEMP_DIR, resourceName);
-                Files.copy(getClass().getClassLoader().getResourceAsStream(resourceName), tempPath,
+                Files.copy(getClass().getClassLoader().getResourceAsStream(resourceName), destination,
                         StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to copy resource " + resourceName + " to temporary directory", e);
