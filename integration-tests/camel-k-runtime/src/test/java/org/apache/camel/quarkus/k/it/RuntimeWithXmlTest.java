@@ -17,10 +17,13 @@
 package org.apache.camel.quarkus.k.it;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 import java.util.Map;
 
 import io.quarkus.test.common.QuarkusTestResource;
@@ -54,15 +57,13 @@ public class RuntimeWithXmlTest {
     }
 
     public static class Resources implements QuarkusTestResourceLifecycleManager {
-        private static final String TEMP_DIR = "target/test-classes/temp"; // Specify your temporary directory here
+        private static final Path TEMP_DIR = Paths.get("target/test-classes/camel-k-runtime-xml"); // Specify your temporary directory here
 
         @Override
         public Map<String, String> start() {
             // Create the temporary directory if it doesn't exist
-            File tempDir = new File(TEMP_DIR);
-            if (!tempDir.exists()) {
-                tempDir.mkdirs();
-            }
+            File tempDir = TEMP_DIR.toFile();
+            tempDir.mkdirs();
 
             // Copy the XML files from the classpath to the temporary directory
             copyResourceToTemp("routes.xml");
@@ -86,10 +87,9 @@ public class RuntimeWithXmlTest {
         }
 
         private void copyResourceToTemp(String resourceName) {
-            try {
-                Path tempPath = Paths.get(TEMP_DIR, resourceName);
-                Files.copy(getClass().getClassLoader().getResourceAsStream(resourceName), tempPath,
-                        StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream stream = getClass().getClassLoader().getResourceAsStream(resourceName)) {
+                Path tempPath = TEMP_DIR.resolve(resourceName);
+                Files.copy(stream, tempPath, StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to copy resource " + resourceName + " to temporary directory", e);
             }
@@ -97,6 +97,14 @@ public class RuntimeWithXmlTest {
 
         @Override
         public void stop() {
+            try {
+                Files.walk(TEMP_DIR)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                // Ignored
+            }
         }
     }
 }

@@ -106,8 +106,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <environmentVariables>
-                        <CAMEL_K_CONF>${project.basedir}/src/test/resources/conf.properties</CAMEL_K_CONF>
-                        <CAMEL_K_CONF_D>${project.basedir}/src/test/resources/conf.d</CAMEL_K_CONF_D>
+                        <CAMEL_K_CONF>${project.build.testOutputDirectory}/camel-k-runtime/conf.properties</CAMEL_K_CONF>
+                        <CAMEL_K_CONF_D>${project.build.testOutputDirectory}/camel-k-runtime/conf.d</CAMEL_K_CONF_D>
                     </environmentVariables>
                 </configuration>
             </plugin>
@@ -131,6 +131,28 @@
             <properties>
                 <quarkus.package.type>native</quarkus.package.type>
             </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                                <configuration>
+                                    <environmentVariables>
+                                        <CAMEL_K_CONF>${project.build.testOutputDirectory}/camel-k-runtime/conf.properties</CAMEL_K_CONF>
+                                        <CAMEL_K_CONF_D>${project.build.testOutputDirectory}/camel-k-runtime/conf.d</CAMEL_K_CONF_D>
+                                    </environmentVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <profile>
             <id>virtualDependencies</id>
