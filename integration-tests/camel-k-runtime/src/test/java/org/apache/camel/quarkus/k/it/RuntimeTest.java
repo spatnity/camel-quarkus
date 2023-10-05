@@ -16,10 +16,14 @@
  */
 package org.apache.camel.quarkus.k.it;
 
-import java.nio.file.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 import java.util.Map;
 
 import io.quarkus.test.common.QuarkusTestResource;
@@ -58,36 +62,32 @@ public class RuntimeTest {
     }
 
     public static class Resources implements QuarkusTestResourceLifecycleManager {
-        private final Path TEMP_DIR = Paths.get("target/test-classes/temp1"); // Specify your temporary directory here
+        private static final Path TEMP_DIR = Paths.get("target/test-classes/camel-k-runtime"); // Specify your temporary directory here
 
         @Override
         public Map<String, String> start() {
             Path confd = TEMP_DIR.resolve("conf.d");
 
-            // Create the temporary directory if it doesn't exist
             for (int i = 1; i <= 3; i++) {
                 String path = String.format("00%d", i);
                 Path confdSubDir = confd.resolve(path);
                 confdSubDir.toFile().mkdirs();
 
                 String file = i < 3 ? "conf.properties" : "flat-property";
-                copyResourceToTemp("/conf.d/" + path + "/" + file, confdSubDir.resolve(file).toAbsolutePath());
+                copyResourceToTemp("conf.d/" + path + "/" + file, confdSubDir.resolve(file).toAbsolutePath());
             }
 
-            // Copy the XML files from the classpath to the temporary directory
             Path confProperties = TEMP_DIR.resolve("conf.properties");
-            copyResourceToTemp("/conf.properties", confProperties.toAbsolutePath());
+            copyResourceToTemp("conf.properties", confProperties.toAbsolutePath());
 
-            // Create paths for conf.properties and conf.d based on the temporary directory
             return Map.of(
                     "CAMEL_K_CONF", confProperties.toAbsolutePath().toString(),
                     "CAMEL_K_CONF_D", confd.toAbsolutePath().toString());
         }
 
         private void copyResourceToTemp(String resourceName, Path destination) {
-            try {
-                Files.copy(getClass().getClassLoader().getResourceAsStream(resourceName), destination,
-                        StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream stream = getClass().getClassLoader().getResourceAsStream(resourceName)) {
+                Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to copy resource " + resourceName + " to temporary directory", e);
             }
@@ -95,6 +95,14 @@ public class RuntimeTest {
 
         @Override
         public void stop() {
+            try {
+                Files.walk(TEMP_DIR)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                // Ignored
+            }
         }
     }
 
