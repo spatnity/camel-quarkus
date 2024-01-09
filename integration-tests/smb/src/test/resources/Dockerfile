@@ -16,7 +16,6 @@
 #
 
 FROM fedora:38 as samba
-LABEL maintainer="orpiske@apache.org"
 ENV SAMBA_ROOT /opt/camel/samba
 EXPOSE 139 445
 RUN dnf install -y samba && mkdir -p /data/rw /data/ro
