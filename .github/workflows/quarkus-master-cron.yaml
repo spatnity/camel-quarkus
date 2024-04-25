@@ -72,9 +72,12 @@ jobs:
             && echo "Current Quarkus commit:" $(git rev-parse HEAD) \
             && sed -i '/<module>integration-tests<\/module>/d' pom.xml \
             && ./mvnw ${CQ_MAVEN_ARGS} clean install -Dquickly -T1C
+      - name: Update extension metadata
+        run: |
+          ./mvnw -N cq:update-quarkus-metadata ${CQ_MAVEN_ARGS}
       - name: mvn clean install -DskipTests
         run: |
-          eval ./mvnw ${CQ_MAVEN_ARGS} ${BRANCH_OPTIONS} clean install -DskipTests -Dquarkus.build.skip
+          eval ./mvnw ${CQ_MAVEN_ARGS} ${BRANCH_OPTIONS} clean install -DskipTests -Dquarkus.build.skip -Pformat
       - name: Sync Maven properties
         run: |
           ./mvnw cq:sync-versions ${CQ_MAVEN_ARGS} -N
@@ -89,7 +92,7 @@ jobs:
           ls -lh ${{ runner.temp }}/maven-repo.tgz
           df -h /
       - name: Persist Maven Repo
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: maven-repo
           path: ${{ runner.temp }}/maven-repo.tgz
@@ -140,7 +143,7 @@ jobs:
       matrix: ${{ fromJson(needs.initial-mvn-install.outputs.matrix) }}
     steps:
       - name: Download Maven Repo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: maven-repo
           path: ..
@@ -222,7 +225,7 @@ jobs:
       MAVEN_OPTS: -Xmx3000m
     steps:
       - name: Download Maven Repo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: maven-repo
           path: ..
@@ -299,7 +302,7 @@ jobs:
       MAVEN_OPTS: -Xmx3000m
     steps:
       - name: Download Maven Repo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: maven-repo
           path: ..
@@ -347,6 +350,18 @@ jobs:
     env:
       MAVEN_OPTS: -Xmx3000m
     steps:
+      - name: Download Maven Repo
+        uses: actions/download-artifact@v4
+        with:
+          name: maven-repo
+          path: ..
+      - name: Extract Maven Repo
+        shell: bash
+        run: |
+          df -h /
+          tar -xzf ../maven-repo.tgz -C ~
+          rm -f ../maven-repo.tgz
+          df -h /
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -365,18 +380,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - name: Download Maven Repo
-        uses: actions/download-artifact@v3
-        with:
-          name: maven-repo
-          path: ..
-      - name: Extract Maven Repo
-        shell: bash
-        run: |
-          df -h /
-          tar -xzf ../maven-repo.tgz -C ~
-          rm -f ../maven-repo.tgz
-          df -h /
       - name: cd integration-tests && mvn clean verify
         shell: bash
         env:
@@ -400,7 +403,7 @@ jobs:
       MAVEN_OPTS: -Xmx3000m
     steps:
       - name: Download Maven Repo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: maven-repo
           path: ..
@@ -453,7 +456,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Download Maven Repo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: maven-repo
           path: ..
@@ -535,7 +538,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Download Maven Repo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: maven-repo
           path: ..

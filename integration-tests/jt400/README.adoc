@@ -88,6 +88,31 @@ CRTDTAQ DTAQ(LIBRARY/TESTKEYED) SEQ(*KEYED) KEYLEN(20) MAXLEN(100)
 CRTDTAQ DTAQ(LIBRARY/TESTLIFO) SEQ(*LIFO) MAXLEN(100)
 ```
 
+==== Synchronization for parallel executions
+
+The tests do not work by default for parallel executions.
+For parallel scenario, the locking file has to be provided.
+
+You can create such file by running
+
+```
+QSH CMD('touch #file_lock_path')
+for example QSH CMD('touch /home/#username/cq_jt400_lock')
+```
+
+How to provide a locking file:
+
+```
+export JT400_LOCK_FILE=#file_lock_path
+```
+
+or for Windows:
+
+```
+$Env:JT400_LOCK_FILE="#file_lock_path"
+```
+*If locking file is not provided, tests may fail their executions in parallel mode*
+
 ==== Using different object names
 
 If your test object names are different from the default ones, you can override default values via environmental variable
@@ -109,5 +134,5 @@ $Env:JT400_LIFO_QUEUE="#lifoqueue_if_not_TESTLIFO.DTAQe"
 $Env:JT400_KEYED_QUEUE="#lkeyedqueue_if_not_TESTKEYED.DTAQ"
 $Env:JT400_MESSAGE_QUEUE="#messagequeue_if_not_TESTMSGQ.MSGQ"
 $Env:JT400_MESSAGE_REPLYTO_QUEUE="#messagequeueinquiry_if_not_REPLYMSGQ.MSGQ"
-$Env:JT400_USER_SPACE="#userspace_if_not_PROGCALL"
 ```
+

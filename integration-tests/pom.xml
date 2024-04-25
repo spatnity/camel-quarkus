@@ -236,8 +236,9 @@
         <module>velocity</module>
         <module>vertx</module>
         <module>vertx-websocket</module>
+        <module>wasm</module>
         <module>weather</module>
-        <!--<module>xchange</module> https://github.com/apache/camel-quarkus/issues/4516 -->
+        <module>xchange</module>
         <module>xj</module>
         <module>xml-grouped</module>
         <module>xml-jaxp</module>

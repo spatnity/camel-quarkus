@@ -26,14 +26,6 @@ public class JasyptSecureExtensionConfigTestProfile implements QuarkusTestProfil
     @Override
     public Map<String, String> getConfigOverrides() {
         return Map.of(
-                // camel
-                "quarkus.datasource.devservices.username",
-                "ENC(ehEx3VxgoFVuReSFsgyUrw==)",
-                "quarkus.datasource.username", "${camel-jasypt::${quarkus.datasource.devservices.username}}",
-                // c4m31s3cr3t
-                "quarkus.datasource.devservices.password",
-                "ENC(ySRd4rq2bAuKEDe7wvcS37xERpu5+DgK)",
-                "quarkus.datasource.password", "${camel-jasypt::${quarkus.datasource.devservices.password}}",
                 "camel.component.direct.timeout", "ENC(FGlWjTf42zBT4vCRCztncA==)");
     }
 }
