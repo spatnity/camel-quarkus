@@ -16,40 +16,58 @@
  */
 package org.apache.camel.quarkus.component.langchain.chat.it;
 
+import java.util.List;
 import java.util.Map;
 
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.model.Image;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
+import org.apache.camel.util.CollectionHelper;
+import org.testcontainers.DockerClientFactory;
+import org.testcontainers.utility.DockerImageName;
 
-public class ollamaTestResource<T extends GenericContainer> implements QuarkusTestResourceLifecycleManager {
+public class OllamaTestResource<T extends OllamaContainer> implements QuarkusTestResourceLifecycleManager {
 
     private static final int OLLAMA_PORT = 11434;
     private static final String OLLAMA_IMAGE = "docker.io/ollama/ollama:0.1.27";
-    private static final String OLLAMA_MODEL= orca-mini;
+    private static final String OLLAMA_MODEL = "orca-mini";
 
-    private GenericContainer<?> container;
+    public static final String LOCAL_OLLAMA_IMAGE = String.format("tc-%s-%s", OLLAMA_IMAGE, OLLAMA_MODEL);
+
+    private OllamaContainer container;
+
+    private DockerImageName dockerImageName;
 
     @Override
     public Map<String, String> start() {
         try {
-            container = new GenericContainer<>(OLLAMA_IMAGE)
-                    .withExposedPorts(OLLAMA_PORT)
-                    .waitingFor(Wait.forListeningPort());
+            dockerImageName = resolveImageName();
+
+            container = new OllamaContainer(dockerImageName, OLLAMA_PORT, OLLAMA_MODEL, LOCAL_OLLAMA_IMAGE);
+
             container.start();
 
-            String ollamaHost = container.getHost();
-            int ollamaPort = container.getMappedPort(OLLAMA_PORT);
+            return CollectionHelper.mapOf(
+                    "ollama.base.url", getBaseUrl()
 
-            return Map.of(
-                    "ollamaHost", ollamaHost,
-                    "ollamaPort", Integer.toString(OLLAMA_PORT),
-                    "ollama.model", ollamaModel
-                    );
+            );
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected DockerImageName resolveImageName() {
+        DockerImageName dockerImageName = DockerImageName.parse(OLLAMA_IMAGE);
+        DockerClient dockerClient = DockerClientFactory.instance().client();
+        List<Image> images = dockerClient.listImagesCmd().withReferenceFilter(LOCAL_OLLAMA_IMAGE).exec();
+        if (images.isEmpty()) {
+            return dockerImageName;
+        }
+        return DockerImageName.parse(LOCAL_OLLAMA_IMAGE);
+    }
+
+    public String getBaseUrl() {
+        return "http://" + container.getHost() + ":" + container.getMappedPort(OLLAMA_PORT);
     }
 
     @Override
@@ -59,7 +77,7 @@ public class ollamaTestResource<T extends GenericContainer> implements QuarkusTe
                 container.stop();
             }
         } catch (Exception ex) {
-            LOG.error("An issue occured while stopping the Container", ex);
+            //LOG.error("An issue occured while stopping the Container", ex);
         }
     }
 
