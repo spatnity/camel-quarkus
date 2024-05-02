@@ -29,18 +29,16 @@ public class OllamaRoute extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
-
         from("direct:send-simple-message?timeout=30000")
                 .to("langchain-chat:test1?chatModel=#chatModel&chatOperation=CHAT_SINGLE_MESSAGE")
-                .to("mock:response");
+                .to("mock:simpleMessageResponse");
 
-      /*  from("direct:send-message-prompt?timeout=30000")
+        from("direct:send-message-prompt?timeout=30000")
                 .to("langchain-chat:test2?chatModel=#chatModel&chatOperation=CHAT_SINGLE_MESSAGE_WITH_PROMPT")
-                .to("mock:response");
+                .to("mock:messagePromptResponse");
 
         from("direct:send-multiple?timeout=30000")
                 .to("langchain-chat:test2?chatModel=#chatModel&chatOperation=CHAT_MULTIPLE_MESSAGES")
-                .to("mock:response");*/
-
+                .to("mock:multipleMessageResponse");
     }
 }

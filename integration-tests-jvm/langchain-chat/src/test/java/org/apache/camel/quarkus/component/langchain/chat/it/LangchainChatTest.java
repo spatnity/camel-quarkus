@@ -26,18 +26,23 @@ import org.junit.jupiter.api.Test;
 class LangchainChatTest {
 
     @Test
-    public void loadComponentLangchainChat() {
+    void simpleMessage() {
         RestAssured.get("/langchain-chat/simple-message")
                 .then()
-                .statusCode(204);
-
-        RestAssured.get("/langchain-chat/promt-message")
-                .then()
-                .statusCode(204);
-
-        /*RestAssured.get("/langchain-chat/multiple-messages")
-                .then()
-                .statusCode(204);*/
+                .statusCode(200);
     }
 
+    @Test
+    void promptMessage() {
+        RestAssured.get("/langchain-chat/prompt-message")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void multipleMessages() {
+        RestAssured.get("/langchain-chat/multiple-messages")
+                .then()
+                .statusCode(200);
+    }
 }
