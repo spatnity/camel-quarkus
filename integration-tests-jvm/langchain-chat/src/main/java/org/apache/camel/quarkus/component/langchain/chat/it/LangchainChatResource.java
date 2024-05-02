@@ -29,49 +29,50 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.camel.CamelContext;
-import org.apache.camel.EndpointInject;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.chat.LangChainChat;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.jboss.logging.Logger;
 
 @Path("/langchain-chat")
 @ApplicationScoped
 public class LangchainChatResource {
-
-    private static final Logger LOG = Logger.getLogger(LangchainChatResource.class);
-
-    // private static final String COMPONENT_LANGCHAIN_CHAT = "langchain-chat";
-
     @Inject
     CamelContext context;
 
     @Inject
     ProducerTemplate producerTemplate;
 
-    @EndpointInject("mock:result")
-    private MockEndpoint mock;
-
     @Path("/simple-message")
     @GET
-    @Produces(MediaType.TEXT_PLAIN)
     public Response sendSimpleMessage() throws Exception {
-        //  mockEndpoint.expectedMessageCount(1);
+        MockEndpoint mockEndpoint = context.getEndpoint("mock:simpleMessageResponse", MockEndpoint.class);
+        mockEndpoint.expectedMessageCount(1);
+        mockEndpoint.expectedMessagesMatches(exchange -> {
+            String body = exchange.getMessage().getBody(String.class);
+            return body.trim().startsWith("Hello");
+        });
 
-        String response = producerTemplate.requestBody("direct:send-simple-message", "Hello my name is Darth Vader!",
-                String.class);
-        // mockEndpoint.assertIsSatisfied();
-        return Response.noContent().build();
+        producerTemplate.sendBody("direct:send-simple-message", "Hello my name is Darth Vader!");
+        mockEndpoint.assertIsSatisfied(10000);
+
+        return Response.ok().build();
     }
 
-    @Path("/promt-message")
+    @Path("/prompt-message")
     @GET
-    @Produces(MediaType.TEXT_PLAIN)
-    public Response sendMessagewithPromt() throws Exception {
+    public Response sendMessageWithPrompt() throws Exception {
+        MockEndpoint mockEndpoint = context.getEndpoint("mock:messagePromptResponse", MockEndpoint.class);
+        mockEndpoint.expectedMessageCount(1);
+        mockEndpoint.expectedMessagesMatches(exchange -> {
+            String body = exchange.getMessage().getBody(String.class);
+            body = body.trim();
+            return body.contains("potato") &&
+                    body.contains("tomato") &&
+                    body.contains("feta") &&
+                    body.contains("olive oil");
+        });
 
         var promptTemplate = "Create a recipe for a {{dishType}} with the following ingredients: {{ingredients}}";
 
@@ -79,23 +80,23 @@ public class LangchainChatResource {
         variables.put("dishType", "oven dish");
         variables.put("ingredients", "potato, tomato, feta, olive oil");
 
-        String response = producerTemplate.requestBodyAndHeader("direct:send-message-prompt", variables,
-                LangChainChat.Headers.PROMPT_TEMPLATE, promptTemplate, String.class);
-        /*  mockEndpoint.assertIsSatisfied();
+        producerTemplate.sendBodyAndHeader("direct:send-message-prompt", variables,
+                LangChainChat.Headers.PROMPT_TEMPLATE, promptTemplate);
 
-        assertTrue(response.contains("potato"));
-        assertTrue(response.contains("tomato"));
-        assertTrue(response.contains("feta"));
-        assertTrue(response.contains("olive oil"));*/
-        return Response.noContent().build();
+        mockEndpoint.assertIsSatisfied(10000);
 
+        return Response.ok().build();
     }
 
     @Path("/multiple-messages")
     @GET
-    @Produces(MediaType.TEXT_PLAIN)
     public Response sendMultipleMessage() throws Exception {
-        //  mockEndpoint.expectedMessageCount(1);
+        MockEndpoint mockEndpoint = context.getEndpoint("mock:multipleMessageResponse", MockEndpoint.class);
+        mockEndpoint.expectedMessageCount(1);
+        mockEndpoint.expectedMessagesMatches(exchange -> {
+            String body = exchange.getMessage().getBody(String.class);
+            return body.trim().contains("I would recommend");
+        });
 
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(new SystemMessage("You are asked to provide recommendations for a restaurant based on user reviews."));
@@ -107,12 +108,11 @@ public class LangchainChatResource {
         messages.add(new AiMessage("Sure, do you have a preference for the location?"));
         messages.add(new UserMessage("Paris, Rue Montorgueil."));
 
-        String response = producerTemplate.requestBody("direct:send-multiple", messages, String.class);
-        /*   mockEndpoint.assertIsSatisfied();
+        producerTemplate.sendBody("direct:send-multiple", messages);
 
-        assertNotNull(response);*/
-        return Response.noContent().build();
+        mockEndpoint.assertIsSatisfied(10000);
 
+        return Response.ok().build();
     }
 
 }
