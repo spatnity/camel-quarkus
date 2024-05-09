@@ -36,4 +36,19 @@ class GraphQLTest {
                 .statusCode(200)
                 .body("data.bookById.name", is("Harry Potter and the Philosophers Stone"));
     }
+
+    @Test
+    public void testGraphQLMutation() {
+
+        RestAssured
+                .given()
+                .queryParam("testPort", RestAssured.port)
+                .queryParam("name", "The Great Gatsby")
+                .queryParam("bookID", "book-4")
+                .post("/graphql/mutation")
+                .then()
+                .statusCode(200)
+                .body("data.addBook.name", is("The Great Gatsby"))
+                .body("data.addBook.author.id", is("author-4"));
+    }
 }

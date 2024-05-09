@@ -39,6 +39,7 @@ import io.vertx.ext.web.handler.graphql.GraphQLHandler;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
@@ -46,6 +47,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.quarkus.component.graphql.it.model.Book;
+import org.apache.camel.quarkus.component.graphql.it.model.BookInput;
 import org.apache.camel.util.json.JsonObject;
 
 @Path("/graphql")
@@ -76,8 +78,20 @@ public class GraphQLResource {
             return completableFuture;
         };
 
+        DataFetcher<CompletionStage<BookInput>> addBookDataFetcher = environment -> {
+            CompletableFuture<BookInput> completableFuture = new CompletableFuture<>();
+            BookInput bookInput = environment.getArgument("bookInput");
+            String id = bookInput.getId();
+            String name = bookInput.getName();
+
+            BookInput Input = new BookInput(name, id);
+
+            return CompletableFuture.completedFuture(Input);
+        };
+
         RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring()
                 .type("Query", builder -> builder.dataFetcher("bookById", dataFetcher))
+                .type("Mutation", builder -> builder.dataFetcher("addBook", addBookDataFetcher))
                 .build();
 
         SchemaGenerator schemaGenerator = new SchemaGenerator();
@@ -108,6 +122,33 @@ public class GraphQLResource {
                 .ok()
                 .entity(result)
                 .build();
+    }
+
+    @Path("/mutation")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response mutation(@QueryParam("testPort") int port, @QueryParam("name") String name,
+            @QueryParam("bookID") String bookId) {
+
+        JsonObject bookInput = new JsonObject();
+        bookInput.put("name", name);
+        bookInput.put("id", bookId);
+        JsonObject variables = new JsonObject();
+        variables.put("bookInput", bookInput);
+
+        producerTemplate.getCamelContext().getRegistry().bind("addBookMutationVariables", variables);
+
+        final String result = producerTemplate.requestBody(
+                "graphql://http://localhost:" + port
+                        + "/graphql/server?queryFile=graphql/addBookMutation.graphql&operationName=AddBook&variables=#addBookMutationVariables",
+                null,
+                String.class);
+
+        return Response
+                .ok()
+                .entity(result)
+                .build();
+
     }
 
     private Book getBookById(DataFetchingEnvironment environment) {
