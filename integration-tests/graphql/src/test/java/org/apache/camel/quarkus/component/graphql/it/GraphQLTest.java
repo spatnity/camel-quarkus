@@ -39,16 +39,23 @@ class GraphQLTest {
 
     @Test
     public void testGraphQLMutation() {
+        RestAssured
+                .given()
+                .queryParam("testPort", RestAssured.port)
+                .queryParam("authorId", "author-4")
+                .queryParam("name", "The Great Gatsby")
+                .post("/graphql/mutation")
+                .then()
+                .statusCode(200)
+                .body("data.addBook.name", is("The Great Gatsby"));
 
         RestAssured
                 .given()
                 .queryParam("testPort", RestAssured.port)
-                .queryParam("name", "The Great Gatsby")
-                .queryParam("bookID", "book-4")
-                .post("/graphql/mutation")
+                .queryParam("bookId", "book-4")
+                .get("/graphql/query")
                 .then()
                 .statusCode(200)
-                .body("data.addBook.name", is("The Great Gatsby"))
-                .body("data.addBook.author.id", is("author-4"));
+                .body("data.bookById.name", is("The Great Gatsby"));
     }
 }

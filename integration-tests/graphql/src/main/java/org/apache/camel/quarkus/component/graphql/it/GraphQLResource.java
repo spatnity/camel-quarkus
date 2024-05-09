@@ -20,8 +20,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -47,16 +48,15 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.quarkus.component.graphql.it.model.Book;
-import org.apache.camel.quarkus.component.graphql.it.model.BookInput;
 import org.apache.camel.util.json.JsonObject;
 
 @Path("/graphql")
 public class GraphQLResource {
 
-    private static final List<Book> BOOKS = Arrays.asList(
+    private static final List<Book> BOOKS = new ArrayList<>(List.of(
             new Book("book-1", "Harry Potter and the Philosophers Stone", "author-1"),
             new Book("book-2", "Moby Dick", "author-2"),
-            new Book("book-3", "Interview with the vampire", "author-3"));
+            new Book("book-3", "Interview with the vampire", "author-3")));
 
     @Inject
     ProducerTemplate producerTemplate;
@@ -78,15 +78,10 @@ public class GraphQLResource {
             return completableFuture;
         };
 
-        DataFetcher<CompletionStage<BookInput>> addBookDataFetcher = environment -> {
-            CompletableFuture<BookInput> completableFuture = new CompletableFuture<>();
-            BookInput bookInput = environment.getArgument("bookInput");
-            String id = bookInput.getId();
-            String name = bookInput.getName();
-
-            BookInput Input = new BookInput(name, id);
-
-            return CompletableFuture.completedFuture(Input);
+        DataFetcher<CompletionStage<Book>> addBookDataFetcher = environment -> {
+            CompletableFuture<Book> completableFuture = new CompletableFuture<>();
+            completableFuture.complete(addBook(environment));
+            return completableFuture;
         };
 
         RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring()
@@ -110,12 +105,10 @@ public class GraphQLResource {
         JsonObject variables = new JsonObject();
         variables.put("id", bookId);
 
-        producerTemplate.getCamelContext().getRegistry().bind("bookByIdQueryVariables", variables);
-
         final String result = producerTemplate.requestBody(
                 "graphql://http://localhost:" + port
-                        + "/graphql/server?queryFile=graphql/bookQuery.graphql&operationName=BookById&variables=#bookByIdQueryVariables",
-                null,
+                        + "/graphql/server?queryFile=graphql/bookQuery.graphql&operationName=BookById",
+                variables,
                 String.class);
 
         return Response
@@ -127,32 +120,42 @@ public class GraphQLResource {
     @Path("/mutation")
     @POST
     @Produces(MediaType.APPLICATION_JSON)
-    public Response mutation(@QueryParam("testPort") int port, @QueryParam("name") String name,
-            @QueryParam("bookID") String bookId) {
+    public Response mutation(
+            @QueryParam("testPort") int port,
+            @QueryParam("authorId") String authorId,
+            @QueryParam("name") String name,
+            @QueryParam("bookId") String bookId) {
 
         JsonObject bookInput = new JsonObject();
         bookInput.put("name", name);
-        bookInput.put("id", bookId);
+        bookInput.put("authorId", authorId);
         JsonObject variables = new JsonObject();
         variables.put("bookInput", bookInput);
 
-        producerTemplate.getCamelContext().getRegistry().bind("addBookMutationVariables", variables);
-
         final String result = producerTemplate.requestBody(
                 "graphql://http://localhost:" + port
-                        + "/graphql/server?queryFile=graphql/addBookMutation.graphql&operationName=AddBook&variables=#addBookMutationVariables",
-                null,
+                        + "/graphql/server?queryFile=graphql/addBookMutation.graphql&operationName=AddBook",
+                variables,
                 String.class);
 
         return Response
                 .ok()
                 .entity(result)
                 .build();
-
     }
 
     private Book getBookById(DataFetchingEnvironment environment) {
         String bookId = environment.getArgument("id");
         return BOOKS.stream().filter(book -> book.getId().equals(bookId)).findFirst().orElse(null);
+    }
+
+    private Book addBook(DataFetchingEnvironment environment) {
+        Map<String, String> bookInput = environment.getArgument("bookInput");
+        String id = "book-" + (BOOKS.size() + 1);
+        String name = bookInput.get("name");
+        String authorId = bookInput.get("authorId");
+        Book book = new Book(id, name, authorId);
+        BOOKS.add(book);
+        return book;
     }
 }
