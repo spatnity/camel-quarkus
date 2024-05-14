@@ -31,7 +31,7 @@ class GraphQLTest {
                 .given()
                 .queryParam("testPort", RestAssured.port)
                 .queryParam("bookId", "book-1")
-                .get("/graphql/query")
+                .get("/graphql/queryFile")
                 .then()
                 .statusCode(200)
                 .body("data.bookById.name", is("Harry Potter and the Philosophers Stone"));
@@ -53,9 +53,10 @@ class GraphQLTest {
                 .given()
                 .queryParam("testPort", RestAssured.port)
                 .queryParam("bookId", "book-4")
-                .get("/graphql/query")
+                .get("/graphql/queryFile")
                 .then()
                 .statusCode(200)
                 .body("data.bookById.name", is("The Great Gatsby"));
     }
+
 }

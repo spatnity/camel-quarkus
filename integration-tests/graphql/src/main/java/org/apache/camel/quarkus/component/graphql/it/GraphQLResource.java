@@ -98,17 +98,18 @@ public class GraphQLResource {
         router.route("/graphql/server").handler(GraphQLHandler.create(graphQL));
     }
 
-    @Path("/query")
+    @Path("/queryFile")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response multipleQueries(@QueryParam("testPort") int port, @QueryParam("bookId") String bookId) {
         JsonObject variables = new JsonObject();
         variables.put("id", bookId);
 
-        final String result = producerTemplate.requestBody(
-                "graphql://http://localhost:" + port
-                        + "/graphql/server?queryFile=graphql/bookQuery.graphql&operationName=BookById",
-                variables,
+        final Map<String, Object> headers = Map.of("port", port);
+
+        final String result = producerTemplate.requestBodyAndHeaders(
+                "direct:getBookGraphQL",
+                variables, headers,
                 String.class);
 
         return Response
@@ -123,8 +124,7 @@ public class GraphQLResource {
     public Response mutation(
             @QueryParam("testPort") int port,
             @QueryParam("authorId") String authorId,
-            @QueryParam("name") String name,
-            @QueryParam("bookId") String bookId) {
+            @QueryParam("name") String name) {
 
         JsonObject bookInput = new JsonObject();
         bookInput.put("name", name);
@@ -132,10 +132,11 @@ public class GraphQLResource {
         JsonObject variables = new JsonObject();
         variables.put("bookInput", bookInput);
 
-        final String result = producerTemplate.requestBody(
-                "graphql://http://localhost:" + port
-                        + "/graphql/server?queryFile=graphql/addBookMutation.graphql&operationName=AddBook",
-                variables,
+        final Map<String, Object> headers = Map.of("port", port);
+
+        final String result = producerTemplate.requestBodyAndHeaders(
+                "direct:addBookGraphQL",
+                variables, headers,
                 String.class);
 
         return Response
@@ -143,6 +144,18 @@ public class GraphQLResource {
                 .entity(result)
                 .build();
     }
+
+    // @Path("/query")
+    // @GET
+    // @Produces(MediaType.APPLICATION_JSON)
+    // public Response booksQueryWithStaticQuery(@QueryParam("testPort") int port){
+
+    //     final Map<String, Object> headers = Map.of("port", port);
+
+    //     String result = producerTemplate.requestBodyAndHeaders("direct:getQuery", null, headers String.class);
+
+    //     return Response.ok().entity(result).build();
+    // }
 
     private Book getBookById(DataFetchingEnvironment environment) {
         String bookId = environment.getArgument("id");
