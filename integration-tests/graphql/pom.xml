@@ -43,9 +43,10 @@
             <groupId>org.apache.camel.quarkus</groupId>
             <artifactId>camel-quarkus-direct</artifactId>
         </dependency>
+        <!-- Provides a GraphQL server implementation to test against -->
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-vertx-graphql</artifactId>
+            <artifactId>quarkus-smallrye-graphql</artifactId>
         </dependency>
 
         <!-- test dependencies -->

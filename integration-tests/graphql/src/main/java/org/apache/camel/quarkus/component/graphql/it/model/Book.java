@@ -20,21 +20,25 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
 public class Book {
-    private String id;
+    private int id;
     private String name;
-    private String authorId;
+    private String author;
 
-    public Book(String id, String name, String authorId) {
-        this.id = id;
-        this.name = name;
-        this.authorId = authorId;
+    public Book() {
+
     }
 
-    public String getId() {
+    public Book(int id, String name, String author) {
+        this.id = id;
+        this.name = name;
+        this.author = author;
+    }
+
+    public int getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(int id) {
         this.id = id;
     }
 
@@ -46,11 +50,11 @@ public class Book {
         this.name = name;
     }
 
-    public String getAuthorId() {
-        return authorId;
+    public String getAuthor() {
+        return author;
     }
 
-    public void setAuthorId(String authorId) {
-        this.authorId = authorId;
+    public void setAuthor(String author) {
+        this.author = author;
     }
 }
