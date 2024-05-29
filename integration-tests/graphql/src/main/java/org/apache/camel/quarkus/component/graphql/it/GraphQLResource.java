@@ -57,6 +57,26 @@ public class GraphQLResource {
                 .build();
     }
 
+    @Path("/queryFile/authenticated")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response multipleQueriesAuthenticated(@QueryParam("testPort") int port, @QueryParam("bookId") int bookId) {
+        JsonObject variables = new JsonObject();
+        variables.put("id", bookId);
+
+        final Map<String, Object> headers = Map.of("port", port);
+
+        final String result = producerTemplate.requestBodyAndHeaders(
+                "direct:getBookGraphQLAuthenticated",
+                variables, headers,
+                String.class);
+
+        return Response
+                .ok()
+                .entity(result)
+                .build();
+    }
+
     @Path("/mutation")
     @POST
     @Produces(MediaType.APPLICATION_JSON)
