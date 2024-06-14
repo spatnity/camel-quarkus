@@ -16,8 +16,12 @@
  */
 package org.apache.camel.quarkus.component.weather.it;
 
+import java.net.URI;
+import java.util.Optional;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -27,6 +31,10 @@ import jakarta.ws.rs.core.Response;
 import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.weather.WeatherConstants;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.core5.http.HttpHost;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -42,7 +50,7 @@ public class WeatherResource {
     @Inject
     ConsumerTemplate consumerTemplate;
 
-    @ConfigProperty(name = "open.weather.api-id")
+    @ConfigProperty(name = "WEATHER_API_ID")
     String weatherApiId;
 
     @Path("location/{location}")
@@ -51,7 +59,7 @@ public class WeatherResource {
     public Response getWeatherByLocation(@PathParam("location") String location) {
         LOG.infof("Retrieve weather with location : %s", location);
         final String response = producerTemplate.requestBodyAndHeader(
-                "weather:foo?location=random&appid=" + weatherApiId,
+                "weather:foo?location=random&httpClient=#weatherHttpClient&appid=" + weatherApiId,
                 "Hello World", WeatherConstants.WEATHER_LOCATION, location, String.class);
         LOG.infof("Got response from weather: %s", response);
         return Response
@@ -66,7 +74,7 @@ public class WeatherResource {
     public Response getWeatherByCoordinate(@PathParam("lat") String latitude, @PathParam("lon") String longitude) {
         LOG.infof("Retrieve weather with georgraphic coordinates latitude : %s, longitude %s", latitude, longitude);
         final String response = producerTemplate.requestBody(
-                "weather:foo?lat=" + latitude + "&lon=" + longitude + "&appid=" + weatherApiId,
+                "weather:foo?httpClient=#weatherHttpClient&lat=" + latitude + "&lon=" + longitude + "&appid=" + weatherApiId,
                 "Hello World", String.class);
         LOG.infof("Got response from weather: %s", response);
         return Response
@@ -81,7 +89,8 @@ public class WeatherResource {
     public Response getWeatherByZip(@PathParam("zip") String zip) {
         LOG.infof("Retrieve weather with georgraphic coordinates zip %s", zip);
         final String response = producerTemplate.requestBody(
-                "weather:foo?zip=" + zip + "&appid=" + weatherApiId, "Hello World", String.class);
+                "weather:foo?httpClient=#weatherHttpClient&zip=" + zip + "&appid=" + weatherApiId, "Hello World",
+                String.class);
         LOG.infof("Got response from weather: %s", response);
         return Response
                 .ok()
@@ -95,7 +104,8 @@ public class WeatherResource {
     public Response getWeatherByIds(@PathParam("ids") String ids) {
         LOG.infof("Retrieve weather with georgraphic coordinates ids %s", ids);
         final String response = producerTemplate.requestBody(
-                "weather:foo?ids=" + ids + "&appid=" + weatherApiId, "Hello World", String.class);
+                "weather:foo?httpClient=#weatherHttpClient&ids=" + ids + "&appid=" + weatherApiId, "Hello World",
+                String.class);
         LOG.infof("Got response from weather: %s", response);
         return Response
                 .ok()
@@ -109,7 +119,7 @@ public class WeatherResource {
     public Response getWeatherByPeriod(@PathParam("location") String location, @PathParam("period") String period) {
         LOG.infof("Retrieve weather with location : %s and period %s", location, period);
         final String response = producerTemplate.requestBodyAndHeader(
-                "weather:foo?location=random&appid=" + weatherApiId + "&period=" + period,
+                "weather:foo?location=random&httpClient=#weatherHttpClient&appid=" + weatherApiId + "&period=" + period,
                 "Hello World", WeatherConstants.WEATHER_LOCATION, location, String.class);
         LOG.infof("Got response from weather: %s", response);
         return Response
@@ -130,4 +140,15 @@ public class WeatherResource {
                 .build();
     }
 
+    @Named("weatherHttpClient")
+    CloseableHttpClient createHttpClient() {
+        Optional<String> wireMockUrl = ConfigProvider.getConfig().getOptionalValue("wiremock.url", String.class);
+        if (wireMockUrl.isPresent()) {
+            URI uri = URI.create(wireMockUrl.get());
+            return HttpClientBuilder.create()
+                    .setProxy(new HttpHost(uri.getHost(), uri.getPort()))
+                    .build();
+        }
+        return HttpClientBuilder.create().build();
+    }
 }
