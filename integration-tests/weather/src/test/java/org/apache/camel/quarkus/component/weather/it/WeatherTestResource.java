@@ -29,7 +29,7 @@ public class WeatherTestResource extends WireMockTestResourceLifecycleManager {
     @Override
     public Map<String, String> start() {
         return CollectionHelper.mergeMaps(super.start(), CollectionHelper.mapOf(
-                "weather.api-id", envOrDefault(WEATHER_API_ID_ENV, "test_api_id")));
+                "weather.api.id", envOrDefault(WEATHER_API_ID_ENV, "test_api_id")));
     }
 
     @Override

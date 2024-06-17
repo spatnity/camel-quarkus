@@ -31,9 +31,13 @@ import jakarta.ws.rs.core.Response;
 import org.apache.camel.ConsumerTemplate;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.component.weather.WeatherConstants;
+import org.apache.hc.client5.http.HttpRoute;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.routing.HttpRoutePlanner;
+import org.apache.hc.core5.http.HttpException;
 import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -50,7 +54,7 @@ public class WeatherResource {
     @Inject
     ConsumerTemplate consumerTemplate;
 
-    @ConfigProperty(name = "WEATHER_API_ID")
+    @ConfigProperty(name = "weather.api.id")
     String weatherApiId;
 
     @Path("location/{location}")
@@ -133,7 +137,7 @@ public class WeatherResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getWeather(@PathParam("location") String location) throws Exception {
         final String message = consumerTemplate.receiveBody(
-                "weather:foo?appid=" + weatherApiId + "&location=" + location, String.class);
+                "weather:foo?httpClient=#weatherHttpClient&appid=" + weatherApiId + "&location=" + location, String.class);
         return Response
                 .ok()
                 .entity(message)
@@ -146,7 +150,12 @@ public class WeatherResource {
         if (wireMockUrl.isPresent()) {
             URI uri = URI.create(wireMockUrl.get());
             return HttpClientBuilder.create()
-                    .setProxy(new HttpHost(uri.getHost(), uri.getPort()))
+                    .setRoutePlanner(new HttpRoutePlanner() {
+                        @Override
+                        public HttpRoute determineRoute(HttpHost target, HttpContext context) throws HttpException {
+                            return new HttpRoute(new HttpHost(uri.getHost(), uri.getPort()));
+                        }
+                    })
                     .build();
         }
         return HttpClientBuilder.create().build();
